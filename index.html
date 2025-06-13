@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>モツオポーカー</title>
   <style>
     body {
       font-family: sans-serif;
       text-align: center;
-      background-color: #fefdeb;
+      background-color: #fefceb;
     }
     h1 {
       font-size: 2.5em;
@@ -15,34 +15,40 @@
     }
     #cards button {
       font-size: 32px;
-      margin: 8px;
-      width: 70px;
-      height: 70px;
-      border-radius: 10px;
+      margin: 6px;
+      width: 64px;
+      height: 64px;
+      border-radius: 8px;
     }
     #cards button.selected {
       background-color: #87cefa;
     }
+    .word-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin: 10px auto;
+      max-width: 90%;
+    }
     .word-list span {
-      display: inline-block;
-      margin: 6px;
-      padding: 6px 10px;
+      font-size: 20px;
+      margin: 4px;
+      padding: 4px 10px;
       border: 1px solid #ccc;
       border-radius: 6px;
       background: white;
-      font-size: 18px;
     }
     button {
-      font-size: 18px;
+      font-size: 20px;
       margin: 10px;
-      padding: 10px 20px;
+      padding: 10px 16px;
       border-radius: 6px;
       border: none;
     }
     .status {
-      margin-top: 10px;
+      margin-top: 15px;
+      font-size: 18px;
       font-weight: bold;
-      font-size: 20px;
     }
   </style>
 </head>
@@ -60,17 +66,24 @@
 
   <script>
     const allWords = [
-      "シロ", "シロシオ", "シロタレ", "シロミソ", "シロスヤキ", "シロナマ",
-      "レバ", "レバシオ", "レバタレ", "レバミソ", "レバスヤキ", "レバボイル",
-      "ガツ", "ガツシオ", "ガツタレ", "ガツミソ", "ガツスヤキ", "ガツナマ",
-      "ナンコツ", "ナンコツシオ", "ナンコツタレ", "ナンコツミソ", "ナンコツスヤキ", "ナンコツナマ",
-      "アブラ", "アブラシオ", "アブラタレ", "アブラスヤキ", "アブラミソ", "アブラナマ",
-      "ハツ", "ハツシオ", "ハツミソ", "ハツスヤキ", "ハツナマ",
-      "カシラ", "カシラシオ", "カシラミソ", "カシラタレ", "カシラスヤキ",
-      "ビール", "ウメワリ", "ブドウワリ", "ウイスキー", "サイダー",
-      "ツル", "ツルシオ", "ツルスヤキ", "ツルミソ", "ツルタレ",
-      "シンキ", "タンナマ", "オシンコ", "ダイコン",
-      "ホネ", "ツル", "ツインズ"
+      "シロ","シロシオ","シロタレ","シロミソ","シロスヤキ","シロナマ",
+      "レバ","レバシオ","レバタレ","レバミソ","レバスヤキ","レバボイル",
+      "ガツ","ガツシオ","ガツタレ","ガツミソ","ガツスヤキ","ガツナマ",
+      "ナンコツ","ナンコツシオ","ナンコツタレ","ナンコツミソ","ナンコツスヤキ","ナンコツナマ",
+      "アブラ","アブラシオ","アブラタレ","アブラスヤキ","アブラミソ","アブラナマ",
+      "ハツ","ハツシオ","ハツミソ","ハツスヤキ","ハツナマ",
+      "カシラ","カシラシオ","カシラミソ","カシラタレ","カシラスヤキ",
+      "ビール","ウメワリ","ブドウワリ","ウイスキー","サイダー",
+      "ツル","ツルシオ","ツルスヤキ","ツルミソ","ツルタレ",
+      "シンキ","タンナマ","オシンコ","ダイコン","ホネ","ツインズ"
+    ];
+
+    let kanaList = [];
+    const kanaBase = [
+      "シ","ロ","シ","オ","タ","レ","ミ","ソ","ス","ヤ","キ","ナ","マ","ガ","ツ","バ",
+      "レ","バ","ボ","イ","ル","ハ","ツ","カ","シ","ラ","ビ","ー","ル","ウ","メ",
+      "ワ","リ","ブ","ド","ウ","ウ","イ","ス","キ","ー","サ","イ","ダ","ー",
+      "ツ","ル","ホ","ネ","ン","コ","オ","シ","ン","コ","ダ","イ","コ","ン","ツ","イ","ン","ズ"
     ];
 
     let deck = [];
@@ -78,13 +91,6 @@
     let selected = [];
     let score = 0;
     let hints = 5;
-
-    const kanaList = [
-      "シ", "ロ", "タ", "レ", "ミ", "ソ", "ス", "ヤ", "キ", "ナ", "マ", "ガ", "ツ", "レ", "バ",
-      "ハ", "ツ", "カ", "シ", "ラ", "ビ", "ー", "ル", "ウ", "メ", "ワ", "リ", "ド", "ブ", "ウ",
-      "ィ", "ス", "キ", "ー", "サ", "イ", "ダ", "ー", "ツ", "ル", "オ", "シ", "ン", "コ", "ダ",
-      "イ", "ホ", "ネ", "ズ"
-    ];
 
     function shuffle(array) {
       for (let i = array.length - 1; i > 0; i--) {
@@ -94,8 +100,10 @@
     }
 
     function initGame() {
-      for (let i = 0; i < 4; i++) kanaList.forEach(k => deck.push(k));
-      shuffle(deck);
+      kanaList = [];
+      for (let i = 0; i < 4; i++) kanaList.push(...kanaBase);
+      shuffle(kanaList);
+      deck = kanaList.slice(0, 120);
       currentCards = deck.splice(0, 12);
       updateDisplay();
       displayValidWords();
@@ -126,8 +134,10 @@
 
     function confirmSelection() {
       if (selected.length === 0) {
-        drawNewCards();
+        currentCards = deck.splice(0, 12);
+        selected = [];
         document.getElementById("resultText").textContent = "選択なし。カードを引き直しました。";
+        updateDisplay();
         return;
       }
 
@@ -137,16 +147,13 @@
       if (matchingWords.length === 1) {
         score += selected.length;
         document.getElementById("resultText").textContent = `成立: ${selectedWord} +${selected.length}点`;
-        drawNewCards();
+        currentCards = deck.splice(0, 12);
+        selected = [];
       } else {
         document.getElementById("resultText").textContent = "不成立。カードを引き直します。";
-        drawNewCards();
+        currentCards = deck.splice(0, 12);
+        selected = [];
       }
-    }
-
-    function drawNewCards() {
-      currentCards = deck.splice(0, 12);
-      selected = [];
       updateDisplay();
     }
 
@@ -156,12 +163,11 @@
       for (const combo of combos) {
         if (allWords.includes(combo)) {
           selected = [];
-          let startIdx = 0;
-          for (const ch of combo) {
-            const idx = currentCards.indexOf(ch, startIdx);
-            if (idx !== -1 && !selected.includes(idx)) {
+          for (let i = 0, last = -1; i < combo.length; i++) {
+            const idx = currentCards.indexOf(combo[i], last + 1);
+            if (idx !== -1) {
               selected.push(idx);
-              startIdx = idx + 1;
+              last = idx;
             }
           }
           updateDisplay();
@@ -175,18 +181,13 @@
 
     function getAllCombinations(arr) {
       const results = [];
-      for (let len = 2; len <= arr.length; len++) {
-        const combine = (prefix, rest) => {
-          if (prefix.length === len) {
-            results.push(prefix.join(""));
-            return;
-          }
-          for (let i = 0; i < rest.length; i++) {
-            combine([...prefix, rest[i]], rest.slice(i + 1));
-          }
-        };
-        combine([], arr);
-      }
+      const combine = (prefix, rest) => {
+        results.push(prefix.join(""));
+        for (let i = 0; i < rest.length; i++) {
+          combine([...prefix, rest[i]], rest.slice(i + 1));
+        }
+      };
+      combine([], arr);
       return results;
     }
 

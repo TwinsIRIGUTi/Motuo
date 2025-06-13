@@ -1,221 +1,154 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>モツオポーカー</title>
   <style>
-    body {
-      font-family: sans-serif;
-      text-align: center;
-      background-color: #f0f2f7;
-    }
-    h1 {
-      font-size: 2.5em;
-      margin: 20px 0;
-    }
-    .status {
-      font-size: 1.2em;
-      margin-bottom: 10px;
-    }
-    .card {
-      display: inline-block;
-      padding: 15px 20px;
-      margin: 5px;
-      font-size: 2em;
-      border: 2px solid #ccc;
-      border-radius: 8px;
-      background-color: white;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .selected {
-      background-color: lightblue;
-    }
-    .word-button {
-      display: inline-block;
-      margin: 4px;
-      padding: 6px 10px;
-      border: 1px solid #aaa;
-      border-radius: 6px;
-      background-color: white;
-      font-size: 1em;
-    }
-    .button {
-      padding: 10px 16px;
-      margin: 10px;
-      font-size: 1em;
-      border-radius: 6px;
-      border: none;
-      background-color: #e0e0f8;
-      cursor: pointer;
-    }
-    .message {
-      margin: 10px;
-      font-weight: bold;
-      font-size: 1.2em;
-    }
+    body { font-family: sans-serif; text-align: center; background: #fffdee; }
+    #game { display: none; }
+    .card { display: inline-block; border: 1px solid #333; padding: 20px; margin: 5px; font-size: 2em; cursor: pointer; }
+    .selected { background-color: yellow; }
+    #wordList { max-width: 90%; margin: 1em auto; font-size: 1em; }
   </style>
 </head>
 <body>
-  <h1>モツオポーカー</h1>
-  <div class="status">スコア: <span id="score">0</span></div>
-  <div class="status">残りカード: <span id="remaining">120</span></div>
-  <div class="status">ヒント残り: <span id="hint">5</span></div>
-
-  <div id="cards"></div>
-
-  <div>
-    <button class="button" onclick="decide()">決定</button>
-    <button class="button" onclick="useHint()">ヒント</button>
+  <h1 onclick="startGame()">モツオポーカー</h1>
+  <div id="game">
+    <div id="cards"></div>
+    <button onclick="submitSelection()">決定</button>
+    <div id="message"></div>
+    <div>スコア: <span id="score">0</span></div>
+    <div>ヒント残り: <span id="hint">3</span></div>
+    <div>残りカード: <span id="deckCount">108</span></div>
+    <div id="wordList"></div>
   </div>
-
-  <div class="message" id="message"></div>
-
-  <h3>成立する単語一覧</h3>
-  <div id="words"></div>
 
   <script>
     const wordList = [
       "シロ", "シロシオ", "シロタレ", "シロミソ", "シロスヤキ", "シロナマ",
       "レバ", "レバシオ", "レバタレ", "レバミソ", "レバスヤキ", "レバボイル",
       "ガツ", "ガツシオ", "ガツタレ", "ガツミソ", "ガツスヤキ", "ガツナマ",
-      "ナンコツ", "ナンコツシオ", "ナンコツタレ", "ナンコツミソ", "ナンコツスヤキ",
-      "アブラ", "アブラシオ", "アブラタレ",
-      "ハツ", "ハツシオ", "ハツミソ", "ハツスヤキ",
-      "カシラ", "カシラシオ", "カシラミソ", "カシラタレ",
-      "レカシラミソ",
-      "ビール", "ウメワリ", "ブドウワリ", "ウワリ", "ウイスキー", "サイダー",
-      "ツル", "ツルシオ", "ツルスヤキ",
-      "キツルミソ", "ソンタレ", "シンキタン", "ナマオシンコ", "ダイコン",
+      "ナンコツ", "ナンコツシオ", "ナンコツタレ", "ナンコツミソ", "ナンコツスヤキ", "ナンコツナマ",
+      "アブラ", "アブラシオ", "アブラタレ", "アブラスヤキ", "アブラミソ", "アブラナマ",
+      "ハツ", "ハツシオ", "ハツミソ", "ハツスヤキ", "ハツナマ",
+      "カシラ", "カシラシオ", "カシラミソ", "カシラタレ", "カシラスヤキ",
+      "ビール", "ウメワリ", "ブドウワリ", "ウイスキー", "サイダー",
+      "ツル", "ツルシオ", "ツルスヤキ", "ツルミソ", "ツルタレ",
+      "シンキ", "タンナマ", "オシンコ", "ダイコン",
       "ホネ", "ツル", "ツインズ"
     ];
 
-    let deck = [];
-    let hand = [];
+    document.getElementById("wordList").textContent = "単語一覧: " + wordList.join("、");
+
+    const cardCharacters = [
+      "シ", "ロ", "シ", "オ", "タ", "レ", "ミ", "ソ", "ス", "ヤ", "キ", "ナ",
+      "レ", "バ", "ボ", "イ", "ル", "ガ", "ツ", "ナ", "ン", "コ", "ツ",
+      "ア", "ブ", "ラ", "ハ", "ツ", "カ", "シ", "ラ", "ビ", "ー", "ル",
+      "ウ", "メ", "ワ", "リ", "ド", "ウ", "ウ", "イ", "ス", "キ", "ー",
+      "サ", "イ", "ダ", "ー", "ツ", "ル", "シ", "ン", "キ", "タ", "ン",
+      "マ", "オ", "シ", "ン", "コ", "ダ", "イ", "ホ", "ネ", "ツ", "イ",
+      "ン", "ズ"
+    ];
+
+    let deck = [...cardCharacters];
+    while (deck.length < 120) {
+      deck = deck.concat(cardCharacters);
+    }
+    deck = deck.slice(0, 120);
+    deck = shuffle(deck);
+
+    let hand = deck.splice(0, 12);
     let selected = [];
     let score = 0;
-    let hints = 5;
+    let hintCount = 3;
+
+    function startGame() {
+      document.querySelector("#game").style.display = "block";
+      renderHand();
+      updateDeckCount();
+    }
 
     function shuffle(array) {
       for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [array[i], array[j]] = [array[j], array[i]];
       }
+      return array;
     }
 
-    function initDeck() {
-      const chars = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワンガギグゲゴザジズゼゾダヂヅデドバビブベボパピプペポツルホネツインズ".split("");
-      deck = [];
-      for (let i = 0; i < 120; i++) {
-        deck.push(chars[Math.floor(Math.random() * chars.length)]);
-      }
-      shuffle(deck);
-    }
-
-    function drawCards(n) {
-      const drawn = [];
-      for (let i = 0; i < n && deck.length > 0; i++) {
-        drawn.push(deck.pop());
-      }
-      return drawn;
-    }
-
-    function renderCards() {
-      const cardContainer = document.getElementById("cards");
-      cardContainer.innerHTML = "";
+    function renderHand() {
+      const container = document.getElementById("cards");
+      container.innerHTML = "";
       hand.forEach((char, index) => {
-        const card = document.createElement("div");
-        card.className = "card";
-        if (selected.includes(index)) card.classList.add("selected");
-        card.innerText = char;
-        card.onclick = () => {
+        const div = document.createElement("div");
+        div.className = "card";
+        div.textContent = char;
+        if (selected.includes(index)) div.classList.add("selected");
+        div.onclick = () => {
           if (selected.includes(index)) {
             selected = selected.filter(i => i !== index);
           } else {
             selected.push(index);
           }
-          renderCards();
+          renderHand();
         };
-        cardContainer.appendChild(card);
+        container.appendChild(div);
       });
     }
 
-    function renderWords() {
-      const wordBox = document.getElementById("words");
-      wordBox.innerHTML = "";
-      wordList.forEach(word => {
-        const div = document.createElement("div");
-        div.className = "word-button";
-        div.innerText = word;
-        wordBox.appendChild(div);
-      });
-    }
-
-    function updateStatus() {
-      document.getElementById("score").innerText = score;
-      document.getElementById("remaining").innerText = deck.length;
-      document.getElementById("hint").innerText = hints;
-    }
-
-    function decide() {
+    function submitSelection() {
       const selectedWord = selected.map(i => hand[i]).join("");
-      const msg = document.getElementById("message");
+      const matchedWords = wordList.filter(word => selectedWord.includes(word));
 
       if (selected.length === 0) {
-        hand = drawCards(hand.length);
-        selected = [];
-        msg.innerText = "全て交換しました。";
-        renderCards();
-        updateStatus();
-        return;
-      }
-
-      if (wordList.includes(selectedWord)) {
-        score += selectedWord.length;
-        msg.innerText = `成立: ${selectedWord} +${selectedWord.length}点`;
-        const newCards = drawCards(selected.length);
-        selected.sort((a, b) => b - a).forEach((i, idx) => {
-          hand[i] = newCards[idx] || "";
-        });
-        selected = [];
-      } else {
-        let matched = wordList.filter(word => selectedWord.includes(word));
-        if (matched.length > 0) {
-          msg.innerText = "成立しない単語が含まれてます";
+        replaceAllHand();
+        showMessage("全カード交換しました");
+      } else if (matchedWords.length > 0) {
+        const longestMatch = matchedWords.reduce((a, b) => a.length > b.length ? a : b);
+        if (longestMatch.length === selectedWord.length) {
+          score += 10;
+          document.getElementById("score").textContent = score;
+          replaceMatchedCards();
+          showMessage("成立！ +" + longestMatch);
         } else {
-          hand = drawCards(hand.length);
-          msg.innerText = "不成立。カードを交換します。";
+          showMessage("成立しない単語が含まれてます");
         }
-        selected = [];
+      } else {
+        replaceSelectedCards();
+        showMessage("カードを交換しました");
       }
-      renderCards();
-      updateStatus();
-    }
 
-    function useHint() {
-      if (hints <= 0) return;
-      for (let i = 0; i < hand.length; i++) {
-        for (let word of wordList) {
-          if (word.includes(hand[i])) {
-            document.getElementById("message").innerText = `ヒント: ${word}`;
-            hints--;
-            updateStatus();
-            return;
-          }
-        }
-      }
-    }
-
-    function startGame() {
-      initDeck();
-      hand = drawCards(10);
       selected = [];
-      renderCards();
-      renderWords();
-      updateStatus();
+      renderHand();
+      updateDeckCount();
     }
 
-    startGame();
+    function replaceSelectedCards() {
+      selected.forEach(i => {
+        hand[i] = deck.length > 0 ? deck.shift() : "";
+      });
+    }
+
+    function replaceMatchedCards() {
+      selected.forEach(i => {
+        hand[i] = deck.length > 0 ? deck.shift() : "";
+      });
+    }
+
+    function replaceAllHand() {
+      for (let i = 0; i < hand.length; i++) {
+        hand[i] = deck.length > 0 ? deck.shift() : "";
+      }
+    }
+
+    function showMessage(msg) {
+      document.getElementById("message").textContent = msg;
+    }
+
+    function updateDeckCount() {
+      document.getElementById("deckCount").textContent = deck.length;
+    }
   </script>
 </body>
 </html>

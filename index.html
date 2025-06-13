@@ -141,17 +141,21 @@
         return;
       }
 
-      const selectedWord = selected.map(i => currentCards[i]).join("");
-      const matchingWords = allWords.filter(word => selectedWord === word);
+      const selectedChars = selected.map(i => currentCards[i]);
+      const sortedSelected = selectedChars.slice().sort().join("");
 
-      if (matchingWords.length === 1) {
+      const matchingWords = allWords.filter(word =>
+        word.length === selectedChars.length &&
+        word.split("").sort().join("") === sortedSelected
+      );
+
+      if (matchingWords.length > 0) {
         score += selected.length;
-        document.getElementById("resultText").textContent = `成立: ${selectedWord} +${selected.length}点`;
+        document.getElementById("resultText").textContent = `成立: ${matchingWords[0]} +${selected.length}点`;
       } else {
         document.getElementById("resultText").textContent = "不成立。カードを引き直します。";
       }
 
-      // 成立でも不成立でも、選ばれたカードだけを交換
       selected.forEach(i => {
         currentCards[i] = deck.length > 0 ? deck.shift() : "";
       });
@@ -161,37 +165,43 @@
     }
 
     function showHint() {
-      if (hints <= 0) return;
-      const combos = getAllCombinations(currentCards);
+      if (hints <= 0) {
+        document.getElementById("resultText").textContent = "ヒントなし（残りなし）";
+        return;
+      }
+
+      const indexes = [...Array(currentCards.length).keys()];
+      const getIndexCombos = (prefix, rest) => {
+        const result = [];
+        for (let i = 0; i < rest.length; i++) {
+          const next = [...prefix, rest[i]];
+          result.push(next);
+          result.push(...getIndexCombos(next, rest.slice(i + 1)));
+        }
+        return result;
+      };
+
+      const combos = getIndexCombos([], indexes);
+
       for (const combo of combos) {
-        if (allWords.includes(combo)) {
-          selected = [];
-          for (let i = 0, last = -1; i < combo.length; i++) {
-            const idx = currentCards.indexOf(combo[i], last + 1);
-            if (idx !== -1) {
-              selected.push(idx);
-              last = idx;
-            }
-          }
-          updateDisplay();
+        const chars = combo.map(i => currentCards[i]);
+        const sortedCombo = chars.slice().sort().join("");
+        const match = allWords.find(word =>
+          word.length === chars.length &&
+          word.split("").sort().join("") === sortedCombo
+        );
+
+        if (match) {
+          selected = combo;
           hints--;
+          updateDisplay();
           document.getElementById("hintCount").textContent = hints;
+          document.getElementById("resultText").textContent = `ヒント: ${match}`;
           return;
         }
       }
-      document.getElementById("resultText").textContent = "ヒントなし";
-    }
 
-    function getAllCombinations(arr) {
-      const results = [];
-      const combine = (prefix, rest) => {
-        if (prefix.length > 0) results.push(prefix.join(""));
-        for (let i = 0; i < rest.length; i++) {
-          combine([...prefix, rest[i]], rest.slice(i + 1));
-        }
-      };
-      combine([], arr);
-      return results;
+      document.getElementById("resultText").textContent = "ヒントなし";
     }
 
     function displayValidWords() {

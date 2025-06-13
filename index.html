@@ -78,164 +78,120 @@
   <h3>成立する単語一覧</h3>
   <div id="word-list"></div>
 
-  <script>
-    const words = [
-      "モツオ", "モツリ", "モーション", "オモチ", "モチリ", "チリモ", "モリツ", "オツモ", "モツ", "リモ", "ツオ"
-    ];
+ <script>
+const words = ["motion", "poker", "motsuo", "apple", "code"];
+let deck = [];
+let currentCard = "";
+let selectedLetters = [];
+let usedWords = new Set();
 
-    let deck = [];
-    let hand = [];
-    let selectedIndices = [];
-    let usedWords = new Set();
-    let score = 0;
-    let hintsRemaining = 5;
+const deckElem = document.getElementById("deck");
+const currentCardElem = document.getElementById("current-card");
+const selectedElem = document.getElementById("selected");
+const wordListElem = document.getElementById("word-list");
+const confirmBtn = document.getElementById("confirm");
+const hintBtn = document.getElementById("hint");
+const finalScoreElem = document.getElementById("final-score");
+const restartContainer = document.getElementById("restart-container");
 
-    const handElem = document.getElementById("hand");
-    const confirmBtn = document.getElementById("confirm");
-    const hintBtn = document.getElementById("hint");
-    const statusElem = document.getElementById("status");
-    const scoreElem = document.getElementById("score");
-    const remainingElem = document.getElementById("remaining");
-    const hintCountElem = document.getElementById("hint-count");
-    const finalScoreElem = document.getElementById("final-score");
-    const restartContainer = document.getElementById("restart-container");
-    const wordListElem = document.getElementById("word-list");
+function shuffle(array) {
+  return array.sort(() => Math.random() - 0.5);
+}
 
-    function initialize() {
-      const letters = "モツオリチンシユウケイ";
-      deck = [];
-      for (let i = 0; i < 60; i++) {
-        deck.push(letters[Math.floor(Math.random() * letters.length)]);
-      }
-      hand = deck.splice(0, 12);
-      score = 0;
-      hintsRemaining = 5;
-      usedWords.clear();
-      updateUI();
-      updateWordList();
+function generateDeck() {
+  deck = [];
+  for (let word of words) {
+    for (let char of word) {
+      deck.push(char.toUpperCase());
     }
+  }
+  deck = shuffle(deck);
+}
 
-    function updateUI() {
-      handElem.innerHTML = "";
-      hand.forEach((char, index) => {
-        const card = document.createElement("div");
-        card.className = "card";
-        card.textContent = char;
-        if (selectedIndices.includes(index)) {
-          card.classList.add("selected");
-        }
-        card.addEventListener("click", () => toggleCard(index));
-        handElem.appendChild(card);
-      });
-      scoreElem.textContent = `スコア: ${score}`;
-      remainingElem.textContent = `残りカード: ${deck.length}`;
-      hintCountElem.textContent = `ヒント残り: ${hintsRemaining}`;
-      statusElem.textContent = "";
-      finalScoreElem.textContent = "";
-      restartContainer.innerHTML = "";
-    }
+function drawCard() {
+  if (deck.length === 0) {
+    currentCard = "";
+    currentCardElem.textContent = "";
+    return;
+  }
+  currentCard = deck.pop();
+  currentCardElem.textContent = currentCard;
+}
 
-    function toggleCard(index) {
-      if (selectedIndices.includes(index)) {
-        selectedIndices = selectedIndices.filter(i => i !== index);
-      } else {
-        selectedIndices.push(index);
-      }
-      updateUI();
-    }
+function updateSelected() {
+  selectedElem.textContent = selectedLetters.join("");
+}
 
-    function checkWord() {
-      if (selectedIndices.length === 0) return;
-      const formed = selectedIndices.map(i => hand[i]).join("");
-      if (words.includes(formed) && !usedWords.has(formed)) {
-        usedWords.add(formed);
-        score += formed.length * 10;
-        selectedIndices.sort((a, b) => b - a).forEach(i => hand.splice(i, 1));
-        while (hand.length < 12 && deck.length > 0) {
-          hand.push(deck.shift());
-        }
-        selectedIndices = [];
-        updateUI();
-        checkGameOver();
-      } else {
-        statusElem.textContent = "不正な単語か、すでに使われています。";
-        selectedIndices = [];
-        updateUI();
-      }
-    }
+function checkWord() {
+  const word = selectedLetters.join("").toLowerCase();
+  if (words.includes(word) && !usedWords.has(word)) {
+    usedWords.add(word);
+    alert(`正解！: ${word}`);
+    selectedLetters = [];
+    updateSelected();
+    drawCard();
+    updateWordList();
+    checkGameEnd();
+  } else {
+    alert("不正解 または 既に使われた単語");
+  }
+}
 
-    function giveHint() {
-      if (hintsRemaining <= 0) {
-        statusElem.textContent = "ヒントはもう使えません。";
-        return;
-      }
-      for (const word of words) {
-        if (usedWords.has(word)) continue;
-        const indices = findWordInHand(word);
-        if (indices) {
-          selectedIndices = indices;
-          updateUI();
-          hintCardHighlight(indices);
-          hintsRemaining--;
-          hintCountElem.textContent = `ヒント残り: ${hintsRemaining}`;
-          return;
-        }
-      }
-      statusElem.textContent = "ヒントを出せる単語が見つかりません。";
-    }
+function hint() {
+  const remaining = words.filter(word => !usedWords.has(word));
+  if (remaining.length > 0) {
+    alert("ヒント: " + remaining[Math.floor(Math.random() * remaining.length)]);
+  } else {
+    alert("もうヒントはありません");
+  }
+}
 
-    function findWordInHand(word) {
-      function helper(remainingWord, start, path, used) {
-        if (remainingWord === "") return path;
-        for (let i = start; i < hand.length; i++) {
-          if (!used[i] && hand[i] === remainingWord[0]) {
-            used[i] = true;
-            const res = helper(remainingWord.slice(1), 0, [...path, i], used);
-            if (res) return res;
-            used[i] = false;
-          }
-        }
-        return null;
-      }
-      return helper(word, 0, [], Array(hand.length).fill(false));
-    }
+function updateWordList() {
+  wordListElem.innerHTML = "";
+  words.forEach(word => {
+    const span = document.createElement("span");
+    span.textContent = word + " ";
+    if (usedWords.has(word)) span.style.textDecoration = "line-through";
+    wordListElem.appendChild(span);
+  });
+}
 
-    function hintCardHighlight(indices) {
-      const cards = document.querySelectorAll(".card");
-      indices.forEach(i => {
-        cards[i].classList.add("hinted");
-      });
-    }
+function checkGameEnd() {
+  if (deck.length === 0 && !canFormAnyWord()) {
+    finalScoreElem.textContent = `ゲーム終了！スコア: ${usedWords.size}`;
+    restartContainer.innerHTML = `<button onclick="restartGame()">リスタート</button>`;
+  }
+}
 
-    function checkGameOver() {
-      if (deck.length === 0 && !canFormAnyWord()) {
-        finalScoreElem.textContent = `ゲーム終了！最終スコア: ${score}`;
-        restartContainer.innerHTML = `<button onclick="initialize()">もう一度</button>`;
-      }
-    }
+function canFormAnyWord() {
+  return words.some(word => !usedWords.has(word));
+}
 
-    function canFormAnyWord() {
-      return words.some(word => !usedWords.has(word) && findWordInHand(word));
-    }
+function restartGame() {
+  usedWords.clear();
+  selectedLetters = [];
+  updateSelected();
+  finalScoreElem.textContent = "";
+  restartContainer.innerHTML = "";
+  generateDeck();
+  drawCard();
+  updateWordList();
+}
 
-    function updateWordList() {
-      wordListElem.innerHTML = "";
-      words.forEach(word => {
-        const span = document.createElement("span");
-        span.textContent = word + "　";
-        if (usedWords.has(word)) span.style.color = "gray";
-        wordListElem.appendChild(span);
-      });
-    }
+confirmBtn.addEventListener("click", checkWord);
+hintBtn.addEventListener("click", hint);
 
-    confirmBtn.addEventListener("click", () => {
-      checkWord();
-      updateWordList();
-    });
+currentCardElem.addEventListener("click", () => {
+  if (currentCard) {
+    selectedLetters.push(currentCard);
+    updateSelected();
+    drawCard();
+  }
+});
 
-    hintBtn.addEventListener("click", giveHint);
-
-    initialize();
-  </script>
+generateDeck();
+drawCard();
+updateWordList();
+</script>
 </body>
 </html>

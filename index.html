@@ -147,13 +147,16 @@
       if (matchingWords.length === 1) {
         score += selected.length;
         document.getElementById("resultText").textContent = `成立: ${selectedWord} +${selected.length}点`;
-        currentCards = deck.splice(0, 12);
-        selected = [];
       } else {
         document.getElementById("resultText").textContent = "不成立。カードを引き直します。";
-        currentCards = deck.splice(0, 12);
-        selected = [];
       }
+
+      // 成立でも不成立でも、選ばれたカードだけを交換
+      selected.forEach(i => {
+        currentCards[i] = deck.length > 0 ? deck.shift() : "";
+      });
+
+      selected = [];
       updateDisplay();
     }
 
@@ -182,7 +185,7 @@
     function getAllCombinations(arr) {
       const results = [];
       const combine = (prefix, rest) => {
-        results.push(prefix.join(""));
+        if (prefix.length > 0) results.push(prefix.join(""));
         for (let i = 0; i < rest.length; i++) {
           combine([...prefix, rest[i]], rest.slice(i + 1));
         }

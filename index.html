@@ -7,76 +7,94 @@
     body {
       font-family: sans-serif;
       text-align: center;
-      background-color: #f0f4f8;
+      background-color: #f0f2f7;
     }
     h1 {
-      font-size: 2em;
+      font-size: 2.5em;
       margin: 20px 0;
     }
-    #cards button {
-      font-size: 24px;
+    .status {
+      font-size: 1.2em;
+      margin-bottom: 10px;
+    }
+    .card {
+      display: inline-block;
+      padding: 15px 20px;
       margin: 5px;
-      width: 60px;
-      height: 60px;
+      font-size: 2em;
+      border: 2px solid #ccc;
       border-radius: 8px;
+      background-color: white;
+      cursor: pointer;
+      transition: background 0.2s;
     }
-    #cards button.selected {
-      background-color: #87cefa;
+    .selected {
+      background-color: lightblue;
     }
-    .word-list span {
+    .word-button {
       display: inline-block;
       margin: 4px;
-      padding: 4px 8px;
-      border: 1px solid #ccc;
+      padding: 6px 10px;
+      border: 1px solid #aaa;
       border-radius: 6px;
-      background: white;
+      background-color: white;
+      font-size: 1em;
     }
-    button {
-      font-size: 16px;
-      margin: 8px;
-      padding: 8px 16px;
+    .button {
+      padding: 10px 16px;
+      margin: 10px;
+      font-size: 1em;
       border-radius: 6px;
       border: none;
+      background-color: #e0e0f8;
+      cursor: pointer;
     }
-    .status {
-      margin-top: 10px;
+    .message {
+      margin: 10px;
       font-weight: bold;
+      font-size: 1.2em;
     }
   </style>
 </head>
 <body>
   <h1>モツオポーカー</h1>
-  <div>スコア: <span id="score">0</span></div>
-  <div>残りカード: <span id="deckCount">65</span></div>
-  <div>ヒント残り: <span id="hintCount">5</span></div>
+  <div class="status">スコア: <span id="score">0</span></div>
+  <div class="status">残りカード: <span id="remaining">120</span></div>
+  <div class="status">ヒント残り: <span id="hint">5</span></div>
+
   <div id="cards"></div>
-  <button onclick="confirmSelection()">決定</button>
-  <button onclick="showHint()">ヒント</button>
-  <div class="status" id="resultText"></div>
+
+  <div>
+    <button class="button" onclick="decide()">決定</button>
+    <button class="button" onclick="useHint()">ヒント</button>
+  </div>
+
+  <div class="message" id="message"></div>
+
   <h3>成立する単語一覧</h3>
-  <div class="word-list" id="validWords"></div>
+  <div id="words"></div>
 
   <script>
-    const allWords = [
+    const wordList = [
       "シロ", "シロシオ", "シロタレ", "シロミソ", "シロスヤキ", "シロナマ",
       "レバ", "レバシオ", "レバタレ", "レバミソ", "レバスヤキ", "レバボイル",
       "ガツ", "ガツシオ", "ガツタレ", "ガツミソ", "ガツスヤキ", "ガツナマ",
       "ナンコツ", "ナンコツシオ", "ナンコツタレ", "ナンコツミソ", "ナンコツスヤキ",
       "アブラ", "アブラシオ", "アブラタレ",
       "ハツ", "ハツシオ", "ハツミソ", "ハツスヤキ",
-      "カシラ", "カシラシオ", "カシラタレ", "カシラミソ",
-      "ビール", "ウメワリ", "ブドウワリ", "ウィスキー", "サイダー",
-      "ツル", "ツルシオ", "ツルスヤキ", "キツルミソ",
-      "ソンタレ", "シンキタン", "ナマオシンコ", "ダイコン", "ニコミホネツインズ"
+      "カシラ", "カシラシオ", "カシラミソ", "カシラタレ",
+      "レカシラミソ",
+      "ビール", "ウメワリ", "ブドウワリ", "ウワリ", "ウイスキー", "サイダー",
+      "ツル", "ツルシオ", "ツルスヤキ",
+      "キツルミソ", "ソンタレ", "シンキタン", "ナマオシンコ", "ダイコン",
+      "ホネ", "ツル", "ツインズ"
     ];
 
     let deck = [];
-    let currentCards = [];
+    let hand = [];
     let selected = [];
     let score = 0;
     let hints = 5;
-
-    const kanaList = ["シ", "ロ", "タ", "レ", "ミ", "ソ", "ス", "ヤ", "キ", "ナ", "マ", "ガ", "ツ", "レ", "バ", "ハ", "ツ", "カ", "シ", "ラ", "ビ", "ー", "ル", "ウ", "メ", "ワ", "リ", "ド", "ブ", "ウ", "ィ", "ス", "キ", "ー", "サ", "イ", "ダ", "ー", "ツ", "ル", "オ", "ン", "コ", "ダ", "イ", "ネ"];
 
     function shuffle(array) {
       for (let i = array.length - 1; i > 0; i--) {
@@ -85,112 +103,119 @@
       }
     }
 
-    function initGame() {
-      for (let i = 0; i < 4; i++) kanaList.push(...kanaList);
-      deck = [...kanaList];
-      shuffle(deck);
-      drawCards();
-      displayValidWords();
-    }
-
-    function drawCards() {
-      currentCards = deck.splice(0, 10);
-      selected = [];
-      updateDisplay();
-    }
-
-    function updateDisplay() {
-      document.getElementById("cards").innerHTML = "";
-      currentCards.forEach((kana, i) => {
-        const btn = document.createElement("button");
-        btn.textContent = kana;
-        if (selected.includes(i)) btn.classList.add("selected");
-        btn.onclick = () => toggleSelect(i);
-        document.getElementById("cards").appendChild(btn);
-      });
-      document.getElementById("deckCount").textContent = deck.length;
-      document.getElementById("score").textContent = score;
-      document.getElementById("hintCount").textContent = hints;
-    }
-
-    function toggleSelect(index) {
-      if (selected.includes(index)) {
-        selected = selected.filter(i => i !== index);
-      } else {
-        selected.push(index);
+    function initDeck() {
+      const chars = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワンガギグゲゴザジズゼゾダヂヅデドバビブベボパピプペポツルホネツインズ".split("");
+      deck = [];
+      for (let i = 0; i < 120; i++) {
+        deck.push(chars[Math.floor(Math.random() * chars.length)]);
       }
-      updateDisplay();
+      shuffle(deck);
     }
 
-    function confirmSelection() {
+    function drawCards(n) {
+      const drawn = [];
+      for (let i = 0; i < n && deck.length > 0; i++) {
+        drawn.push(deck.pop());
+      }
+      return drawn;
+    }
+
+    function renderCards() {
+      const cardContainer = document.getElementById("cards");
+      cardContainer.innerHTML = "";
+      hand.forEach((char, index) => {
+        const card = document.createElement("div");
+        card.className = "card";
+        if (selected.includes(index)) card.classList.add("selected");
+        card.innerText = char;
+        card.onclick = () => {
+          if (selected.includes(index)) {
+            selected = selected.filter(i => i !== index);
+          } else {
+            selected.push(index);
+          }
+          renderCards();
+        };
+        cardContainer.appendChild(card);
+      });
+    }
+
+    function renderWords() {
+      const wordBox = document.getElementById("words");
+      wordBox.innerHTML = "";
+      wordList.forEach(word => {
+        const div = document.createElement("div");
+        div.className = "word-button";
+        div.innerText = word;
+        wordBox.appendChild(div);
+      });
+    }
+
+    function updateStatus() {
+      document.getElementById("score").innerText = score;
+      document.getElementById("remaining").innerText = deck.length;
+      document.getElementById("hint").innerText = hints;
+    }
+
+    function decide() {
+      const selectedWord = selected.map(i => hand[i]).join("");
+      const msg = document.getElementById("message");
+
       if (selected.length === 0) {
-        drawCards();
-        document.getElementById("resultText").textContent = "選択なし。カードを引き直しました。";
+        hand = drawCards(hand.length);
+        selected = [];
+        msg.innerText = "全て交換しました。";
+        renderCards();
+        updateStatus();
         return;
       }
 
-      const selectedWord = selected.map(i => currentCards[i]).join("");
-      const matchingWords = allWords.filter(word => selectedWord.includes(word));
-
-      if (matchingWords.length === 1 && selectedWord === matchingWords[0]) {
-        score += selected.length;
-        document.getElementById("resultText").textContent = `成立: ${selectedWord} +${selected.length}点`;
-        drawCards();
-      } else if (matchingWords.length > 0) {
-        document.getElementById("resultText").textContent = "成立しない単語が含まれています。";
+      if (wordList.includes(selectedWord)) {
+        score += selectedWord.length;
+        msg.innerText = `成立: ${selectedWord} +${selectedWord.length}点`;
+        const newCards = drawCards(selected.length);
+        selected.sort((a, b) => b - a).forEach((i, idx) => {
+          hand[i] = newCards[idx] || "";
+        });
+        selected = [];
       } else {
-        drawCards();
-        document.getElementById("resultText").textContent = "不成立。カードを引き直します。";
-      }
-    }
-
-    function showHint() {
-      if (hints <= 0) return;
-      const combos = getAllCombinations(currentCards);
-      for (const combo of combos) {
-        if (allWords.includes(combo)) {
-          selected = [];
-          for (let i = 0; i < combo.length; i++) {
-            const idx = currentCards.indexOf(combo[i], selected[selected.length - 1] + 1 || 0);
-            if (idx !== -1) selected.push(idx);
-          }
-          updateDisplay();
-          hints--;
-          document.getElementById("hintCount").textContent = hints;
-          return;
+        let matched = wordList.filter(word => selectedWord.includes(word));
+        if (matched.length > 0) {
+          msg.innerText = "成立しない単語が含まれてます";
+        } else {
+          hand = drawCards(hand.length);
+          msg.innerText = "不成立。カードを交換します。";
         }
+        selected = [];
       }
-      document.getElementById("resultText").textContent = "ヒントなし";
+      renderCards();
+      updateStatus();
     }
 
-    function getAllCombinations(arr) {
-      const results = [];
-      for (let len = 2; len <= arr.length; len++) {
-        const combine = (prefix, rest) => {
-          if (prefix.length === len) {
-            results.push(prefix.join(""));
+    function useHint() {
+      if (hints <= 0) return;
+      for (let i = 0; i < hand.length; i++) {
+        for (let word of wordList) {
+          if (word.includes(hand[i])) {
+            document.getElementById("message").innerText = `ヒント: ${word}`;
+            hints--;
+            updateStatus();
             return;
           }
-          for (let i = 0; i < rest.length; i++) {
-            combine([...prefix, rest[i]], rest.slice(i + 1));
-          }
-        };
-        combine([], arr);
+        }
       }
-      return results;
     }
 
-    function displayValidWords() {
-      const container = document.getElementById("validWords");
-      container.innerHTML = "";
-      allWords.forEach(word => {
-        const span = document.createElement("span");
-        span.textContent = word;
-        container.appendChild(span);
-      });
+    function startGame() {
+      initDeck();
+      hand = drawCards(10);
+      selected = [];
+      renderCards();
+      renderWords();
+      updateStatus();
     }
 
-    initGame();
+    startGame();
   </script>
 </body>
 </html>

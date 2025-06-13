@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>モツオポーカー</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 20px; }
+    #hand {
+      margin: 20px auto;
+      display: grid;
+      grid-template-columns: repeat(6, 60px);
+      grid-auto-rows: 60px;
+      gap: 10px;
+      justify-content: center;
+      max-width: 420px;
+    }
+    #word-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 600px;
+      margin: 0 auto;
+      font-size: 14px;
+    }
+    .card {
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: 10px 0;
+      font-size: 20px;
+      cursor: pointer;
+      user-select: none;
+      width: 60px;
+      height: 60px;
+      line-height: 40px;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: black;
+      transition: color 0.3s ease;
+    }
+    .selected { background-color: lightblue; }
+    .hinted { color: red !important; }
+    button { margin: 10px 20px; padding: 10px 20px; font-size: 16px; cursor: pointer; }
+    #status { margin-top: 10px; }
+    #top-info {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+      font-size: 14px;
+    }
+    #final-score {
+      font-size: 36px;
+      color: crimson;
+      margin-top: 30px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>モツオポーカー</h1>
+  <div id="top-info">
+    <div id="score">スコア: 0</div>
+    <div id="remaining">残りカード: 0</div>
+    <div id="hint-count">ヒント残り: 5</div>
+  </div>
+  <div id="hand"></div>
+  <button id="confirm">決定</button>
+  <button id="hint">ヒント</button>
+  <div id="played"></div>
+  <div id="status"></div>
+  <div id="final-score"></div>
+  <div id="restart-container"></div>
+  <h3>成立する単語一覧</h3>
+  <div id="word-list"></div>
+
+  <script>
+    const words = [
+      "モツオ", "モツリ", "モーション", "オモチ", "モチリ", "チリモ", "モリツ", "オツモ", "モツ", "リモ", "ツオ"
+    ];
+
+    let deck = [];
+    let hand = [];
+    let selectedIndices = [];
+    let usedWords = new Set();
+    let score = 0;
+    let hintsRemaining = 5;
+
+    const handElem = document.getElementById("hand");
+    const confirmBtn = document.getElementById("confirm");
+    const hintBtn = document.getElementById("hint");
+    const statusElem = document.getElementById("status");
+    const scoreElem = document.getElementById("score");
+    const remainingElem = document.getElementById("remaining");
+    const hintCountElem = document.getElementById("hint-count");
+    const finalScoreElem = document.getElementById("final-score");
+    const restartContainer = document.getElementById("restart-container");
+    const wordListElem = document.getElementById("word-list");
+
+    function initialize() {
+      const letters = "モツオリチンシユウケイ";
+      deck = [];
+      for (let i = 0; i < 60; i++) {
+        deck.push(letters[Math.floor(Math.random() * letters.length)]);
+      }
+      hand = deck.splice(0, 12);
+      score = 0;
+      hintsRemaining = 5;
+      usedWords.clear();
+      updateUI();
+      updateWordList();
+    }
+
+    function updateUI() {
+      handElem.innerHTML = "";
+      hand.forEach((char, index) => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.textContent = char;
+        if (selectedIndices.includes(index)) {
+          card.classList.add("selected");
+        }
+        card.addEventListener("click", () => toggleCard(index));
+        handElem.appendChild(card);
+      });
+      scoreElem.textContent = `スコア: ${score}`;
+      remainingElem.textContent = `残りカード: ${deck.length}`;
+      hintCountElem.textContent = `ヒント残り: ${hintsRemaining}`;
+      statusElem.textContent = "";
+      finalScoreElem.textContent = "";
+      restartContainer.innerHTML = "";
+    }
+
+    function toggleCard(index) {
+      if (selectedIndices.includes(index)) {
+        selectedIndices = selectedIndices.filter(i => i !== index);
+      } else {
+        selectedIndices.push(index);
+      }
+      updateUI();
+    }
+
+    function checkWord() {
+      if (selectedIndices.length === 0) return;
+      const formed = selectedIndices.map(i => hand[i]).join("");
+      if (words.includes(formed) && !usedWords.has(formed)) {
+        usedWords.add(formed);
+        score += formed.length * 10;
+        selectedIndices.sort((a, b) => b - a).forEach(i => hand.splice(i, 1));
+        while (hand.length < 12 && deck.length > 0) {
+          hand.push(deck.shift());
+        }
+        selectedIndices = [];
+        updateUI();
+        checkGameOver();
+      } else {
+        statusElem.textContent = "不正な単語か、すでに使われています。";
+        selectedIndices = [];
+        updateUI();
+      }
+    }
+
+    function giveHint() {
+      if (hintsRemaining <= 0) {
+        statusElem.textContent = "ヒントはもう使えません。";
+        return;
+      }
+      for (const word of words) {
+        if (usedWords.has(word)) continue;
+        const indices = findWordInHand(word);
+        if (indices) {
+          selectedIndices = indices;
+          updateUI();
+          hintCardHighlight(indices);
+          hintsRemaining--;
+          hintCountElem.textContent = `ヒント残り: ${hintsRemaining}`;
+          return;
+        }
+      }
+      statusElem.textContent = "ヒントを出せる単語が見つかりません。";
+    }
+
+    function findWordInHand(word) {
+      function helper(remainingWord, start, path, used) {
+        if (remainingWord === "") return path;
+        for (let i = start; i < hand.length; i++) {
+          if (!used[i] && hand[i] === remainingWord[0]) {
+            used[i] = true;
+            const res = helper(remainingWord.slice(1), 0, [...path, i], used);
+            if (res) return res;
+            used[i] = false;
+          }
+        }
+        return null;
+      }
+      return helper(word, 0, [], Array(hand.length).fill(false));
+    }
+
+    function hintCardHighlight(indices) {
+      const cards = document.querySelectorAll(".card");
+      indices.forEach(i => {
+        cards[i].classList.add("hinted");
+      });
+    }
+
+    function checkGameOver() {
+      if (deck.length === 0 && !canFormAnyWord()) {
+        finalScoreElem.textContent = `ゲーム終了！最終スコア: ${score}`;
+        restartContainer.innerHTML = `<button onclick="initialize()">もう一度</button>`;
+      }
+    }
+
+    function canFormAnyWord() {
+      return words.some(word => !usedWords.has(word) && findWordInHand(word));
+    }
+
+    function updateWordList() {
+      wordListElem.innerHTML = "";
+      words.forEach(word => {
+        const span = document.createElement("span");
+        span.textContent = word + "　";
+        if (usedWords.has(word)) span.style.color = "gray";
+        wordListElem.appendChild(span);
+      });
+    }
+
+    confirmBtn.addEventListener("click", () => {
+      checkWord();
+      updateWordList();
+    });
+
+    hintBtn.addEventListener("click", giveHint);
+
+    initialize();
+  </script>
+</body>
+</html>

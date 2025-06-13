@@ -7,7 +7,7 @@
     body {
       font-family: sans-serif;
       text-align: center;
-      background-color: #f0f4f8; /* 背景色変更 */
+      background-color: #f0f4f8;
     }
     h1 {
       font-size: 2em;
@@ -128,14 +128,19 @@
         document.getElementById("resultText").textContent = "選択なし。カードを引き直しました。";
         return;
       }
-      const word = selected.map(i => currentCards[i]).join("");
-      if (allWords.includes(word)) {
+
+      const selectedWord = selected.map(i => currentCards[i]).join("");
+      const matchingWords = allWords.filter(word => selectedWord.includes(word));
+
+      if (matchingWords.length === 1 && selectedWord === matchingWords[0]) {
         score += selected.length;
-        document.getElementById("resultText").textContent = `成立: ${word} +${selected.length}点`;
+        document.getElementById("resultText").textContent = `成立: ${selectedWord} +${selected.length}点`;
         drawCards();
+      } else if (matchingWords.length > 0) {
+        document.getElementById("resultText").textContent = "成立しない単語が含まれています。";
       } else {
-        document.getElementById("resultText").textContent = "不成立。カードを引き直します。";
         drawCards();
+        document.getElementById("resultText").textContent = "不成立。カードを引き直します。";
       }
     }
 

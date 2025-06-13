@@ -1,304 +1,280 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>モツオポーカー</title>
-  <style>
-    body { font-family: sans-serif; text-align: center; padding: 20px; }
-    #hand {
-      margin: 20px auto;
-      display: grid;
-      grid-template-columns: repeat(6, 60px);
-      grid-auto-rows: 60px;
-      gap: 10px;
-      justify-content: center;
-      max-width: 420px;
-    }
-    #word-list {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      max-width: 600px;
-      margin: 0 auto;
-      font-size: 14px;
-    }
-    .word-tag {
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      padding: 4px 8px;
-      margin: 4px;
-      display: inline-block;
-    }
-    .card {
-      border: 1px solid #333;
-      border-radius: 6px;
-      padding: 10px 0;
-      font-size: 20px;
-      cursor: pointer;
-      user-select: none;
-      width: 60px;
-      height: 60px;
-      line-height: 40px;
-      box-sizing: border-box;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: black;
-      transition: color 0.3s ease;
-    }
-    .selected { background-color: lightblue; }
-    .hinted { color: red !important; }
-    button { margin: 10px 20px; padding: 10px 20px; font-size: 16px; cursor: pointer; }
-    #status { margin-top: 10px; }
-    #top-info {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 10px;
-      flex-wrap: wrap;
-      font-size: 14px;
-    }
-    #final-score {
-      font-size: 36px;
-      color: crimson;
-      margin-top: 30px;
-      font-weight: bold;
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>モツオポーカー</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 20px; }
+    #hand {
+      margin: 20px auto;
+      display: grid;
+      grid-template-columns: repeat(6, 60px);
+      gap: 10px;
+      justify-content: center;
+    }
+    .card {
+      border: 1px solid #333;
+      border-radius: 6px;
+      font-size: 20px;
+      width: 60px;
+      height: 60px;
+      line-height: 60px;
+      cursor: pointer;
+      user-select: none;
+      background-color: white;
+      color: black;
+      transition: 0.2s;
+    }
+    .card.selected { background-color: lightblue; }
+    .card.hinted { color: red; }
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+    #word-list {
+      font-size: 14px;
+      margin-top: 20px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      justify-content: center;
+    }
+    #word-list span {
+      border: 1px solid #ccc;
+      padding: 3px 6px;
+      border-radius: 4px;
+      background: #f9f9f9;
+    }
+    #final-score {
+      margin-top: 30px;
+      font-size: 24px;
+      font-weight: bold;
+      color: crimson;
+    }
+  </style>
 </head>
 <body>
-  <h1>モツオポーカー</h1>
-  <div id="top-info">
-    <div id="score">スコア: 0</div>
-    <div id="remaining">残りカード: 0</div>
-    <div id="hint-count">ヒント残り: 5</div>
-  </div>
-  <div id="hand"></div>
-  <button id="confirm">決定</button>
-  <button id="hint">ヒント</button>
-  <div id="played"></div>
-  <div id="status"></div>
-  <div id="final-score"></div>
-  <div id="restart-container"></div>
-  <h3>成立する単語一覧</h3>
-  <div id="word-list"></div>
+  <h1>モツオポーカー</h1>
+  <div id="score">スコア: 0</div>
+  <div id="remaining">残りカード: 0</div>
+  <div id="hint-count">ヒント残り: 5</div>
+  <div id="hand"></div>
+  <button id="confirm">決定</button>
+  <button id="hint">ヒント</button>
+  <div id="played"></div>
+  <div id="status"></div>
+  <div id="final-score"></div>
+  <div id="restart-container"></div>
+  <h3>成立する単語一覧</h3>
+  <div id="word-list"></div>
 
-  <script>
-    const validWords = [
-      "シロ", "シロシオ", "シロタレ", "シロミソ", "シロスヤキ", "シロナマ",
-      "レバ", "レバシオ", "レバタレ", "レバミソ", "レバスヤキ", "レバボイル",
-      "ガツ", "ガツシオ", "ガツタレ", "ガツミソ", "ガツスヤキ", "ガツナマ",
-      "ナンコツ", "ナンコツシオ", "ナンコツタレ", "ナンコツミソ", "ナンコツスヤキ",
-      "アブラ", "アブラシオ", "アブラタレ", "アブラミソ", "アブラナマ",
-      "ハツ", "ハツシオ", "ハツタレ", "ハツミソ", "ハツスヤキ", "ハツナマ",
-      "カシラ", "カシラシオ", "カシラタレ", "カシラミソ",
-      "ビール", "ウメワリ", "ブドウワリ", "ウイスキー", "サイダー",
-      "ツル", "ツルシオ", "ツルスヤキ", "ツルミソ", "ツルタレ",
-      "シンキ", "タンナマ", "オシンコ", "ダイコン", "ニコミ", "ホネ", "ツインズ"
-    ];
+  <script>
+    const validWords = [
+      "シロ", "シロシオ", "シロタレ", "シロミソ", "シロスヤキ", "シロナマ",
+      "レバ", "レバシオ", "レバタレ", "レバミソ", "レバスヤキ", "レバボイル",
+      "ガツ", "ガツシオ", "ガツタレ", "ガツミソ", "ガツスヤキ", "ガツナマ",
+      "ナンコツ", "ナンコツシオ", "ナンコツタレ", "ナンコツミソ", "ナンコツスヤキ",
+      "アブラ", "アブラシオ", "アブラタレ", "アブラミソ", "アブラナマ",
+      "ハツ", "ハツシオ", "ハツタレ", "ハツミソ", "ハツスヤキ", "ハツナマ",
+      "カシラ", "カシラシオ", "カシラタレ", "カシラミソ",
+      "ビール", "ウメワリ", "ブドウワリ", "ウイスキー", "サイダー",
+      "ツル", "ツルシオ", "ツルスヤキ", "ツルミソ", "ツルタレ",
+      "シンキ", "タンナマ", "オシンコ", "ダイコン", "ニコミ", "ホネ", "ツインズ"
+    ];
 
-    const charDistribution = {
-      "レ": 6, "バ": 6, "シ": 5, "ツ": 5, "カ": 5, "ラ": 5, "ガ": 5,
-      "ミ": 3, "ソ": 3, "ロ": 2, "ハ": 2,
-    };
-    const allKana = ["ア", "イ", "ウ", "オ", "カ", "ガ", "キ", "コ", "サ", "シ", "ロ", "ス", "ソ", "タ", "ダ", "ツ",
-      "ナ", "ニ", "ネ", "ハ", "ホ", "マ", "ミ", "メ", "ヤ", "ラ", "リ", "ル", "レ", "ワ", "ン", "バ",
-      "ボ", "ブ", "ビ", "ド", "ー", "ズ"];
-    allKana.forEach(k => { if (!(k in charDistribution)) charDistribution[k] = 1; });
+    const charDistribution = {
+      "レ": 6, "バ": 6, "シ": 5, "ツ": 5, "カ": 5, "ラ": 5, "ガ": 5,
+      "ミ": 3, "ソ": 3, "ロ": 2, "ハ": 2
+    };
+    const allKana = [...new Set(validWords.join("").split(""))];
+    allKana.forEach(k => { if (!(k in charDistribution)) charDistribution[k] = 1; });
 
-    let deck = [], hand = [], selected = [], score = 0, hintCount = 5;
-    let hintedIndexes = new Set();
+    let deck = [], hand = [], selected = [], score = 0, hintCount = 5, hintedIndexes = new Set();
 
-    function shuffle(array) {
-      for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-      }
-    }
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
 
-    function createDeck() {
-      deck = [];
-      for (const [char, count] of Object.entries(charDistribution)) {
-        deck.push(...Array(count).fill(char));
-      }
-      deck.push(...Array(4).fill("Wild"));
-      shuffle(deck);
-      updateRemaining();
-    }
+    function createDeck() {
+      deck = [];
+      for (const [char, count] of Object.entries(charDistribution)) {
+        for (let i = 0; i < count; i++) deck.push(char);
+      }
+      deck.push("Wild", "Wild", "Wild", "Wild");
+      shuffle(deck);
+      updateRemaining();
+    }
 
-    function deal(n) {
-      return deck.splice(0, n);
-    }
+    function deal(n) {
+      return deck.splice(0, n);
+    }
 
-    function updateRemaining() {
-      document.getElementById("remaining").innerText = `残りカード: ${deck.length}`;
-    }
+    function updateRemaining() {
+      document.getElementById("remaining").innerText = `残りカード: ${deck.length}`;
+    }
 
-    function updateScore() {
-      document.getElementById("score").innerText = `スコア: ${score}`;
-    }
+    function updateScore() {
+      document.getElementById("score").innerText = `スコア: ${score}`;
+    }
 
-    function updateHintCount() {
-      document.getElementById("hint-count").innerText = `ヒント残り: ${hintCount}`;
-      if (hintCount <= 0) document.getElementById("hint").disabled = true;
-    }
+    function updateHintCount() {
+      document.getElementById("hint-count").innerText = `ヒント残り: ${hintCount}`;
+    }
 
-    function drawHand() {
-      const handDiv = document.getElementById("hand");
-      handDiv.innerHTML = "";
-      hand.forEach((card, i) => {
-        const div = document.createElement("div");
-        div.className = "card" + (selected.includes(i) ? " selected" : "");
-        if (hintedIndexes.has(i)) div.classList.add("hinted");
-        div.innerText = card;
-        div.onclick = () => {
-          selected.includes(i) ? selected = selected.filter(idx => idx !== i) : selected.push(i);
-          drawHand();
-        };
-        handDiv.appendChild(div);
-      });
-    }
+    function drawHand() {
+      const handDiv = document.getElementById("hand");
+      handDiv.innerHTML = "";
+      hand.forEach((card, i) => {
+        const div = document.createElement("div");
+        div.className = "card";
+        if (selected.includes(i)) div.classList.add("selected");
+        if (hintedIndexes.has(i)) div.classList.add("hinted");
+        div.innerText = card;
+        div.onclick = () => {
+          if (selected.includes(i)) {
+            selected = selected.filter(idx => idx !== i);
+          } else {
+            selected.push(i);
+          }
+          drawHand();
+        };
+        handDiv.appendChild(div);
+      });
+    }
 
-    function showWordList() {
-      const listDiv = document.getElementById("word-list");
-      listDiv.innerHTML = "";
-      validWords.forEach(word => {
-        const span = document.createElement("span");
-        span.className = "word-tag";
-        span.textContent = word;
-        listDiv.appendChild(span);
-      });
-    }
+    function permuteWithWildcards(arr) {
+      const results = [];
+      const used = Array(arr.length).fill(false);
+      function backtrack(path) {
+        if (path.length === arr.length) {
+          results.push([...path]);
+          return;
+        }
+        for (let i = 0; i < arr.length; i++) {
+          if (used[i]) continue;
+          used[i] = true;
+          if (arr[i] === "Wild") {
+            for (const kana of Object.keys(charDistribution)) {
+              path.push(kana);
+              backtrack(path);
+              path.pop();
+            }
+          } else {
+            path.push(arr[i]);
+            backtrack(path);
+            path.pop();
+          }
+          used[i] = false;
+        }
+      }
+      backtrack([]);
+      return results;
+    }
 
-    function permuteWithWildcards(arr) {
-      const results = [], used = Array(arr.length).fill(false);
-      function backtrack(path) {
-        if (path.length === arr.length) {
-          results.push([...path]);
-          return;
-        }
-        for (let i = 0; i < arr.length; i++) {
-          if (used[i]) continue;
-          used[i] = true;
-          if (arr[i] === "Wild") {
-            for (const kana of Object.keys(charDistribution)) {
-              path.push(kana);
-              backtrack(path);
-              path.pop();
-            }
-          } else {
-            path.push(arr[i]);
-            backtrack(path);
-            path.pop();
-          }
-          used[i] = false;
-        }
-      }
-      backtrack([]);
-      return results;
-    }
+    function isWordFormable(word, cards) {
+      const cardCount = {};
+      let wildCount = 0;
+      cards.forEach(c => {
+        if (c === "Wild") wildCount++;
+        else cardCount[c] = (cardCount[c] || 0) + 1;
+      });
+      for (const ch of word) {
+        if ((cardCount[ch] || 0) > 0) cardCount[ch]--;
+        else if (wildCount > 0) wildCount--;
+        else return false;
+      }
+      return true;
+    }
 
-    function isWordFormable(word, cards) {
-      const cardCount = {}; let wildCount = 0;
-      cards.forEach(c => { c === "Wild" ? wildCount++ : cardCount[c] = (cardCount[c] || 0) + 1; });
-      for (const ch of word) {
-        if (cardCount[ch]) cardCount[ch]--;
-        else if (wildCount > 0) wildCount--;
-        else return false;
-      }
-      return true;
-    }
+    function findValidWordFromHand() {
+      const cards = hand.slice();
+      const sortedWords = [...validWords].sort((a, b) => b.length - a.length);
+      for (const word of sortedWords) {
+        if (isWordFormable(word, cards)) return word;
+      }
+      return null;
+    }
 
-    function findValidWordFromHand() {
-      const cards = hand.slice();
-      const sortedWords = [...validWords].sort((a, b) => b.length - a.length);
-      return sortedWords.find(word => isWordFormable(word, cards)) || null;
-    }
+    function hint() {
+      if (hintCount <= 0) return alert("ヒントはもう使えません！");
+      hintedIndexes.clear();
+      const foundWord = findValidWordFromHand();
+      if (!foundWord) return alert("成立する単語がありません。");
+      const tempHand = hand.slice();
+      const usedIndexes = [];
+      for (const ch of foundWord) {
+        let idx = tempHand.findIndex(c => c === ch);
+        if (idx === -1) idx = tempHand.findIndex(c => c === "Wild");
+        if (idx !== -1) {
+          usedIndexes.push(idx);
+          tempHand[idx] = null;
+        }
+      }
+      usedIndexes.forEach(i => hintedIndexes.add(i));
+      hintCount--;
+      updateHintCount();
+      drawHand();
+    }
 
-    function hint() {
-      if (hintCount <= 0) {
-        alert("ヒントはもう使えません！");
-        return;
-      }
-      hintedIndexes.clear();
-      const word = findValidWordFromHand();
-      if (!word) {
-        alert("成立する単語は見つかりませんでした。");
-        hintCount = 0;
-        updateHintCount();
-        return;
-      }
-      const tempHand = hand.slice(), usedIndexes = [];
-      for (const ch of word) {
-        let idx = tempHand.findIndex(c => c === ch);
-        if (idx === -1) idx = tempHand.findIndex(c => c === "Wild");
-        if (idx !== -1) {
-          usedIndexes.push(idx);
-          tempHand[idx] = null;
-        }
-      }
-      usedIndexes.forEach(i => hintedIndexes.add(i));
-      hintCount--;
-      updateHintCount();
-      drawHand();
-    }
+    function play() {
+      const chosen = selected.map(i => hand[i]);
+      if (chosen.length === 0) return;
+      const perms = permuteWithWildcards(chosen);
+      const results = perms.map(p => p.join("")).filter(w => validWords.includes(w));
+      const playedDiv = document.getElementById("played");
+      if (results.length > 0) {
+        const word = results[0];
+        const total = word.length;
+        score += total;
+        playedDiv.innerText = `成立: ${word} +${total}点`;
+        selected.forEach(i => {
+          hand[i] = deck.length > 0 ? deal(1)[0] : null;
+        });
+        hand = hand.filter(c => c !== null);
+      } else {
+        playedDiv.innerText = "不成立。カードを引き直します。";
+        selected.forEach(i => {
+          hand[i] = deck.length > 0 ? deal(1)[0] : null;
+        });
+        hand = hand.filter(c => c !== null);
+      }
+      selected = [];
+      hintedIndexes.clear();
+      drawHand();
+      updateScore();
+      updateRemaining();
+      updateHintCount();
+      if (deck.length === 0 || hand.length === 0) {
+        document.getElementById("final-score").innerText = `ゲーム終了！スコア: ${score}点`;
+      }
+    }
 
-    function checkValidWords(wordArr) {
-      const perms = permuteWithWildcards(wordArr);
-      const found = [];
-      perms.forEach(p => {
-        const word = p.join("");
-        if (validWords.includes(word) && !found.includes(word)) found.push(word);
-      });
-      return found;
-    }
+    function showWordList() {
+      const div = document.getElementById("word-list");
+      validWords.forEach(w => {
+        const span = document.createElement("span");
+        span.innerText = w;
+        div.appendChild(span);
+      });
+    }
 
-    function play() {
-      const chosen = selected.map(i => hand[i]);
-      if (chosen.length === 0) return;
-      const results = checkValidWords(chosen);
-      const playedDiv = document.getElementById("played");
-      if (results.length > 0) {
-        const totalScore = results.reduce((sum, word) => sum + word.length, 0) + (results.length > 1 ? 3 : 0);
-        score += totalScore;
-        playedDiv.innerText = `成立: ${results.join("・")} +${totalScore}点`;
-        selected.forEach(i => { hand[i] = deck.length > 0 ? deal(1)[0] : null; });
-        hand = hand.filter(c => c !== null);
-      } else {
-        playedDiv.innerText = "不成立。カードを引き直します。";
-        selected.forEach(i => { hand[i] = deck.length > 0 ? deal(1)[0] : null; });
-        hand = hand.filter(c => c !== null);
-      }
-      selected = [];
-      hintedIndexes.clear();
-      drawHand();
-      updateRemaining();
-      updateScore();
-      updateHintCount();
-      checkGameOver();
-    }
+    document.getElementById("confirm").onclick = play;
+    document.getElementById("hint").onclick = hint;
 
-    function checkGameOver() {
-      if (deck.length === 0 || hand.length === 0) {
-        document.getElementById("final-score").innerText = `ゲーム終了！スコア: ${score}点`;
-        const restartBtn = document.createElement("button");
-        restartBtn.innerText = "もう一度";
-        restartBtn.onclick = () => location.reload();
-        document.getElementById("restart-container").appendChild(restartBtn);
-      }
-    }
-
-    document.getElementById("confirm").onclick = play;
-    document.getElementById("hint").onclick = hint;
-
-    createDeck();
-    hand = deal(12);
-    drawHand();
-    updateScore();
-    updateHintCount();
-    showWordList();
-  </script>
+    createDeck();
+    hand = deal(12);
+    drawHand();
+    updateScore();
+    updateHintCount();
+    showWordList();
+  </script>
 </body>
 </html>

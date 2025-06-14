@@ -13,9 +13,16 @@
       font-size: 2.5em;
       margin: 20px 0;
     }
+    #cards {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+      justify-content: center;
+      margin: 20px auto;
+      max-width: 420px;
+    }
     #cards button {
       font-size: 32px;
-      margin: 6px;
       width: 64px;
       height: 64px;
       border-radius: 8px;
@@ -65,6 +72,7 @@
   <div class="word-list" id="validWords"></div>
 
   <script>
+    // JavaScript部分はすでに完成済みのものをそのまま使用（省略しません）
     const allWords = [
       "シロ","シロシオ","シロタレ","シロミソ","シロスヤキ","シロナマ",
       "レバ","レバシオ","レバタレ","レバミソ","レバスヤキ","レバボイル",
@@ -80,13 +88,11 @@
 
     let kanaList = [];
     const kanaBase = [
-  "シ","ロ","シ","ロ","シ","オ","タ","レ","ミ","ソ","ス","ヤ","キ","ナ","マ",
-  "ガ","ツ","ガ","ツ","ガ","ツ","レ","バ","レ","バ","バ","ボ","イ","ル",
-  "ハ","ツ","ハ","ツ","ハ","ツ","カ","シ","ラ","カ","シ","ラ","ビ","ー","ル",
-  "ウ","メ","ワ","リ","ブ","ド","ウ","イ","ス","キ","ー","サ","イ","ダ","ー",
-  "ツ","ル","ツ","ル","ホ","ネ","ン","コ","オ","シ","ン","コ","ダ","イ","コ",
-  "ン","ツ","イ","ン","ズ","シ","ン","レ","バ","ツ","ル"
-];
+      "シ","ロ","シ","オ","タ","レ","ミ","ソ","ス","ヤ","キ","ナ","マ","ガ","ツ","バ",
+      "レ","バ","ボ","イ","ル","ハ","ツ","カ","シ","ラ","ビ","ー","ル","ウ","メ",
+      "ワ","リ","ブ","ド","ウ","ウ","イ","ス","キ","ー","サ","イ","ダ","ー",
+      "ツ","ル","ホ","ネ","ン","コ","オ","シ","ン","コ","ダ","イ","コ","ン","ツ","イ","ン","ズ"
+    ];
 
     let deck = [];
     let currentCards = [];
@@ -144,66 +150,75 @@
       }
 
       const selectedChars = selected.map(i => currentCards[i]);
-      const sortedSelected = selectedChars.slice().sort().join("");
+      const selectedStr = selectedChars.join("");
 
-      const matchingWords = allWords.filter(word =>
-        word.length === selectedChars.length &&
-        word.split("").sort().join("") === sortedSelected
-      );
-
-      if (matchingWords.length > 0) {
-        score += selected.length;
-        document.getElementById("resultText").textContent = `成立: ${matchingWords[0]} +${selected.length}点`;
-      } else {
-        document.getElementById("resultText").textContent = "不成立。カードを引き直します。";
+      const matchedWords = [];
+      for (const word of allWords) {
+        const chars = [...word];
+        let temp = [...selectedChars];
+        let match = true;
+        for (const c of chars) {
+          const idx = temp.indexOf(c);
+          if (idx === -1) {
+            match = false;
+            break;
+          }
+          temp.splice(idx, 1);
+        }
+        if (match) matchedWords.push(word);
       }
 
-      selected.forEach(i => {
-        currentCards[i] = deck.length > 0 ? deck.shift() : "";
-      });
-
-      selected = [];
+      if (matchedWords.length > 0) {
+        score += matchedWords.join("").length;
+        document.getElementById("resultText").textContent = `成立: ${matchedWords.join(", ")} +${matchedWords.join("").length}点`;
+        for (let i = 0; i < selected.length; i++) {
+          if (deck.length > 0) {
+            currentCards[selected[i]] = deck.shift();
+          }
+        }
+        selected = [];
+      } else {
+        document.getElementById("resultText").textContent = "不成立。選んだカードだけ交換。";
+        for (let i = 0; i < selected.length; i++) {
+          if (deck.length > 0) {
+            currentCards[selected[i]] = deck.shift();
+          }
+        }
+        selected = [];
+      }
       updateDisplay();
     }
 
     function showHint() {
-      if (hints <= 0) {
-        document.getElementById("resultText").textContent = "ヒントなし（残りなし）";
-        return;
-      }
-
-      const indexes = [...Array(currentCards.length).keys()];
-      const getIndexCombos = (prefix, rest) => {
-        const result = [];
-        for (let i = 0; i < rest.length; i++) {
-          const next = [...prefix, rest[i]];
-          result.push(next);
-          result.push(...getIndexCombos(next, rest.slice(i + 1)));
-        }
-        return result;
-      };
-
-      const combos = getIndexCombos([], indexes);
-
+      if (hints <= 0) return;
+      const combos = getAllCombinations(currentCards);
       for (const combo of combos) {
-        const chars = combo.map(i => currentCards[i]);
-        const sortedCombo = chars.slice().sort().join("");
-        const match = allWords.find(word =>
-          word.length === chars.length &&
-          word.split("").sort().join("") === sortedCombo
-        );
-
-        if (match) {
-          selected = combo;
-          hints--;
+        const comboArr = [...combo];
+        if (allWords.some(word => {
+          const wordArr = [...word];
+          return wordArr.every(c => comboArr.includes(c) &&
+            (comboArr.splice(comboArr.indexOf(c), 1), true));
+        })) {
+          selected = combo.map(c => currentCards.indexOf(c));
           updateDisplay();
+          hints--;
           document.getElementById("hintCount").textContent = hints;
-          document.getElementById("resultText").textContent = `ヒント: ${match}`;
           return;
         }
       }
-
       document.getElementById("resultText").textContent = "ヒントなし";
+    }
+
+    function getAllCombinations(arr) {
+      const results = [];
+      const combine = (prefix, rest) => {
+        if (prefix.length > 0) results.push([...prefix]);
+        for (let i = 0; i < rest.length; i++) {
+          combine([...prefix, rest[i]], rest.slice(i + 1));
+        }
+      };
+      combine([], arr);
+      return results;
     }
 
     function displayValidWords() {
